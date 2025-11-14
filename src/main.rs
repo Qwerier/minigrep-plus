@@ -1,6 +1,6 @@
-pub mod lib;
+use repgrep::Config;
 
-use std::{env, error::Error, fs, process};
+use std::{env, process};
 
 fn main() {
     println!("Hello, world!");
@@ -15,7 +15,7 @@ fn main() {
     println!("Searching for '{}'", config.query);
     println!("In file {}", config.file_path);
 
-    match run(config) {
+    match repgrep::run(config) {
       Err(err)=> {
         println!("Application error: {err}");
         process::exit(1);
@@ -24,37 +24,4 @@ fn main() {
     };
 
     dbg!(args);
-}
-
-fn run(config: Config) -> Result<(), Box<dyn Error>> {
-    let contents = fs::read_to_string(config.file_path)?;
-
-    println!("File contains:\n{contents}");
-
-    Ok(())
-}
-
-struct Config {
-    query: String,
-    file_path: String
-}
-
-impl Config {
-    fn new(args: &[String]) -> Config {
-        let query = args[1].clone();
-        let file_path = args[2].clone();
-
-        Config { query, file_path }
-    }
-
-    fn build(args: &[String]) -> Result<Config, &'static str> {
-        if args.len() <3 {
-            return Err("not enough arguments");
-        }
-
-        let query = args[1].clone();
-        let file_path = args[2].clone();
-
-        Ok(Config { query, file_path })
-    }
 }
