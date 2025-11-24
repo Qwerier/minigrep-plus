@@ -1,15 +1,14 @@
+use clap::Parser;
 use repgrep::Config;
 
-use std::{env, process};
+use std::process;
 
 fn main() {
-    let args:env::Args = env::args();
-
-    let config = Config::build(args)
-        .unwrap_or_else(|err|{
-            eprintln!("Problem parsing arguments: {err}");
-            process::exit(1);
-        });
+    let config = Config::try_parse()
+      .unwrap_or_else(|err|{
+        eprintln!("{err}");
+        process::exit(1);
+      });
 
     println!("Searching for '{}'", config.query);
     println!("In file {}", config.file_path);

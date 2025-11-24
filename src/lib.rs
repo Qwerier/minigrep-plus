@@ -1,32 +1,17 @@
 use std::error::Error;
-use std::{env, fs};
+use std::{ fs};
+use clap::{Parser};
 
+#[derive(Debug, Parser)]
 pub struct Config {
     pub query: String,
     pub file_path: String,
-    pub ignore_case: bool
-}
 
-impl Config {
-    pub fn build<T>(mut args: T) -> Result<Config, &'static str>
-        where T: Iterator<Item = String>
-     {
-        args.next(); // skips the first value: name of program
+    #[arg(short= 'i', long= "ignore-case")]
+    pub ignore_case: bool,
 
-        let query = match args.next() {
-            Some(arg) => arg,
-            None => return Err("No query string was provided")
-        };
-
-        let file_path = match args.next() {
-            Some(arg) => arg,
-            None => return Err("No file path was provided")
-        };
-
-        let ignore_case = env::var("IGNORE_CASE").is_ok();
-
-        Ok(Config { query, file_path, ignore_case })
-    }
+    #[arg(short= 'v', long= "invert-match")]
+    pub invert_match: bool
 }
 
 pub fn run(config : Config) -> Result<(), Box<dyn Error>>{
