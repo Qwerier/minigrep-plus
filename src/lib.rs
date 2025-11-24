@@ -11,23 +11,65 @@ pub struct Config {
     pub ignore_case: bool,
 
     #[arg(short= 'v', long= "invert-match")]
-    pub invert_match: bool
+    pub invert_match: bool,
+
+    #[arg(short='w', long="whole-word")]
+    pub whole_word: bool
 }
 
 pub fn run(config : Config) -> Result<(), Box<dyn Error>>{
     let contents: String = fs::read_to_string(config.file_path)?;
 
-    let results: Vec<&str> = if config.ignore_case {
-        search_case_insensitive(&config.query, &contents)
-    } else {
-        search(&config.query, &contents)
-    };
+    let results = search_demo(&config.query, &contents, config.ignore_case, config.invert_match, config.whole_word);
 
     for line in results  {
         println!("{line}");
     }
 
     Ok(())
+}
+
+fn search_demo<'a>(query: &str, contents: &'a str, ignore_case: bool, invert_match: bool, whole_word: bool) -> Vec<&'a str> {
+    let query: String = if ignore_case {
+        query.to_lowercase()
+    } else {
+        query.to_string()
+    };
+    
+    let results: Vec<&str> = contents
+        .lines()
+        .filter(|line: &&str|{
+            let pred_result: bool = if whole_word {
+                if ignore_case {
+                    line
+                        .split(|c: char| !c.is_alphanumeric())
+                        .any(|word| word.to_lowercase() == query)
+                }
+                else {
+                    line
+                        .split(|c: char| !c.is_alphanumeric())
+                        .any(|word| word == query)
+                }
+            } 
+            else {
+                if ignore_case {
+                    line.to_lowercase().contains(&query)
+                }
+                else {
+                    line.contains(&query)
+                }
+            }; 
+            
+            if invert_match {
+                !pred_result
+            }
+            else {
+                pred_result
+            }
+            
+        })
+        .collect();
+    results
 }
 
 pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str>{
