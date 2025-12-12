@@ -18,10 +18,10 @@ pub struct Config {
 }
 
 pub fn run(cfg : Config) -> Result<(), Box<dyn Error>>{
-    let contents: String = fs::read_to_string(cfg.file_path)?;
+    let contents: String = fs::read_to_string(&cfg.file_path)?;
 
     // let results = search_demo(&config.query, &contents, config.ignore_case, config.invert_match, config.whole_word);
-    let results = search_demo(&cfg.query, &contents, cfg.ignore_case, cfg.invert_match, cfg.whole_word);
+    let results = search(&contents, &cfg);
 
 
     for line in results  {
@@ -31,30 +31,29 @@ pub fn run(cfg : Config) -> Result<(), Box<dyn Error>>{
     Ok(()) 
 }
 
-fn search_demo<'a>(query: &str, contents: &'a str, ignore_case: bool, invert_match: bool, whole_word: bool) -> Vec<&'a str> {
-    let query: String = if ignore_case {
-        query.to_lowercase()
+fn search<'a>(contents: &'a str, cfg: &Config) -> Vec<&'a str> {
+    let query: String = if cfg.ignore_case {
+        cfg.query.to_lowercase()
     } else {
-        query.to_string()
+        cfg.query.to_string()
     };
     
     let results: Vec<&str> = contents
         .lines()
         .filter(|line: &&str|{
-            let matches = matches_line(line, &query, ignore_case, whole_word);
-            matches != invert_match
+            let matches: bool = matches_line(line, &query, cfg.ignore_case, cfg.whole_word);
+            matches != cfg.invert_match
         })
         .collect();
     results
 }
 
 fn matches_line(line: &str, query: &str, ignore_case: bool, whole_word: bool) -> bool {
-    // if whole then split on all non-alphanumeric instances and match
+    // if whole then split on all non-alphanumeric instances and match 
     if whole_word{
-        let compare = |word: &str|{
-            if ignore_case { word.to_lowercase() == query} else { word == query}
-        };
-        line.split(|c: char| !c.is_alphanumeric()).any(compare)
+        line.split(|c: char| !c.is_alphanumeric()).any(
+            |word| if ignore_case {word.to_lowercase() == query} else {word == query}
+        )
     }
     // else simple search
     else {
@@ -63,7 +62,7 @@ fn matches_line(line: &str, query: &str, ignore_case: bool, whole_word: bool) ->
     }
 
 }
-pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str>{
+pub fn search_case_sensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str>{
     contents
         .lines()
         .filter(|line| line.contains(query))
@@ -85,33 +84,50 @@ mod tests {
     use std::vec;
 
     use super::*;
-
+    
     #[test]
-    fn case_sensitive() {
+    fn case_insens_whole() {
         let query = "by";
-        // don't insert a newline character 
+        let filepath = "test.txt";
         let contents = "\
 Rust:
 safe, fast, productive.
-Duct three.
 Lullaby
-Made by me";
-        
-        assert_eq!(vec!["safe, fast, productive."], search_demo(query, contents, true, true, true));
+Made by me
+By us";
+
+        let config: Config = Config { 
+            query: query.to_string(), 
+            file_path: filepath.to_string() , 
+            ignore_case: true, 
+            invert_match: false, 
+            whole_word: true 
+        };
+        // vec!["Rust:","safe, fast, productive.", "Lullaby", "Made by me", "By us"];
+        assert_eq!(vec![ "Made by me", "By us"], search(&contents, &config));
     }
 
     #[test]
-    fn case_insensitive(){
-        let query = "rUsT";
+    fn case_insens(){
+        let query = "by";
+        let filepath = "test.txt";
         let contents = "\
 Rust:
 safe, fast, productive.
-Pick three.
-Trust me.";
+Lullaby
+Made by me
+By us";
 
+        let config: Config = Config { 
+            query: query.to_string(), 
+            file_path: filepath.to_string() , 
+            ignore_case: true, 
+            invert_match: false, 
+            whole_word: false 
+        };
         assert_eq!(
-            vec!["Rust:", "Trust me."],
-            search_case_insensitive(query, contents)
+            vec!["Lullaby", "Made by me", "By us"],
+            search(&contents, &config)
         )
     }
 }
