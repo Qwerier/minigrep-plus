@@ -14,7 +14,10 @@ pub struct Config {
     pub invert_match: bool,
 
     #[arg(short='w', long="whole-word")]
-    pub whole_word: bool
+    pub whole_word: bool,
+
+    #[arg(short='n', long="line-numbers")]
+    pub line_numbers: bool
 }
 
 pub fn run(cfg : Config) -> Result<(), Box<dyn Error>>{
@@ -23,28 +26,33 @@ pub fn run(cfg : Config) -> Result<(), Box<dyn Error>>{
     // let results = search_demo(&config.query, &contents, config.ignore_case, config.invert_match, config.whole_word);
     let results = search(&contents, &cfg);
 
-
-    for line in results  {
-        println!("{line}");
+    for (num, line_num) in results  {
+        match cfg.line_numbers {
+            true => println!("{}: {}", num + 1, line_num),
+            false => println!("{}", line_num)
+        }
     }
+
 
     Ok(()) 
 }
 
-fn search<'a>(contents: &'a str, cfg: &Config) -> Vec<&'a str> {
+fn search<'a>(contents: &'a str, cfg: &Config) -> Vec<(usize ,&'a str)> {
     let query: String = if cfg.ignore_case {
         cfg.query.to_lowercase()
     } else {
         cfg.query.to_string()
     };
     
-    let results: Vec<&str> = contents
+    let results= contents
         .lines()
-        .filter(|line: &&str|{
+        .enumerate()
+        .filter(|(_number,line)|{
             let matches: bool = matches_line(line, &query, cfg.ignore_case, cfg.whole_word);
-            matches != cfg.invert_match
+            matches != cfg.invert_match // exploit the inverse boolean relationship between the two
         })
         .collect();
+
     results
 }
 
@@ -101,10 +109,11 @@ By us";
             file_path: filepath.to_string() , 
             ignore_case: true, 
             invert_match: false, 
-            whole_word: true 
+            whole_word: true,
+            line_numbers: false
         };
         // vec!["Rust:","safe, fast, productive.", "Lullaby", "Made by me", "By us"];
-        assert_eq!(vec![ "Made by me", "By us"], search(&contents, &config));
+        assert_eq!(vec![(3, "Made by me"), (4,"By us")], search(&contents, &config));
     }
 
     #[test]
@@ -123,10 +132,12 @@ By us";
             file_path: filepath.to_string() , 
             ignore_case: true, 
             invert_match: false, 
-            whole_word: false 
+            whole_word: false,
+            line_numbers: true
         };
+
         assert_eq!(
-            vec!["Lullaby", "Made by me", "By us"],
+            vec![(2,"Lullaby"), (3,"Made by me"), (4,"By us")],
             search(&contents, &config)
         )
     }
